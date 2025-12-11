@@ -64,3 +64,5 @@ Dockerfile
 .dockerignore
 .git
 .gitignore
+*.log
+*.logs

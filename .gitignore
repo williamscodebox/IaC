@@ -60,3 +60,5 @@ devOp.txt
 # pipeline.yaml
 docker.txt
 Texp.txt
+*.log
+*.logs

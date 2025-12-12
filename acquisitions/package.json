@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "imports": {
+    "#config/*": "./src/config/*"
+  },
   "scripts": {
     "dev": "node --watch src/index.js",
     "lint": "eslint .",
@@ -23,6 +26,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "winston": "^3.19.0"
   },
   "devDependencies": {

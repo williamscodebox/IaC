@@ -38,7 +38,7 @@ npm run db:migrate
 
 echo ""
 echo "🎉 Production environment started!"
-echo "   Application: http://localhost:3000"
+echo "   Application: http://localhost:4000"
 echo "   Logs: docker logs acquisition-app-prod"
 echo ""
 echo "Useful commands:"

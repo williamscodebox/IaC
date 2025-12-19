@@ -18,6 +18,8 @@ const securityMiddleware = async (req, res, next) => {
       case 'guest':
         limit = 5;
         break;
+      default:
+        limit = 5;
     }
 
     const client = aj.withRule(
@@ -31,18 +33,18 @@ const securityMiddleware = async (req, res, next) => {
 
     const decision = await client.protect(req);
 
-    if (decision.isDenied() && decision.reason.isBot()) {
-      logger.warn('Bot request blocked', {
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        path: req.path,
-      });
+    // if (decision.isDenied() && decision.reason.isBot()) {
+    //   logger.warn('Bot request blocked', {
+    //     ip: req.ip,
+    //     userAgent: req.get('User-Agent'),
+    //     path: req.path,
+    //   });
 
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'Automated requests are not allowed',
-      });
-    }
+    //   return res.status(403).json({
+    //     error: 'Forbidden',
+    //     message: 'Automated requests are not allowed',
+    //   });
+    // }
 
     if (decision.isDenied() && decision.reason.isShield()) {
       logger.warn('Shield Blocked request', {

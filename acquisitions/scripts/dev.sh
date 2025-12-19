@@ -36,18 +36,38 @@ echo ""
 
 # Run migrations with Drizzle
 echo "📜 Applying latest schema with Drizzle..."
-npm run db:migrate
+if ! npm run db:migrate; then
+    echo "❌ Migration failed!"
+    exit 1
+fi
 
 # Wait for the database to be ready
 echo "⏳ Waiting for the database to be ready..."
-docker compose exec neon-local psql -U neon -d neondb -c 'SELECT 1'
+until docker compose exec neon-local psql -U neon -d neondb -c 'SELECT 1' >/dev/null 2>&1; do
+    sleep 2
+done
+echo "✅ Database is ready!"
 
-# Start development environment
-docker compose -f docker-compose.dev.yml up --build
+# Optional: verify schema tables exist
+echo "📋 Listing tables in neondb..."
+docker compose exec neon-local psql -U neon -d neondb -c '\dt'
+
+# Optional: check migration history
+echo "📜 Migration history:"
+docker compose exec neon-local psql -U neon -d neondb -c 'SELECT * FROM _drizzle_migrations;'
+
+
+# Handle Ctrl+C gracefully
+trap 'echo "🛑 Stopping containers..."; docker compose -f docker-compose.dev.yml down; exit 0' INT
+
+# Reset log file and start development environment silently
+: > .neon_local/dev.log
+docker compose -f docker-compose.dev.yml up --build | tee .neon_local/dev.log > /dev/null
+
 
 echo ""
 echo "🎉 Development environment started!"
 echo "   Application: http://localhost:5173"
 echo "   Database: postgres://neon:npg@localhost:5432/neondb"
 echo ""
-echo "To stop the environment, press Ctrl+C or run: docker compose down"
+echo "To stop the environment, press Ctrl+C or run: ./stop-dev.sh"

@@ -62,3 +62,5 @@ docker.txt
 Texp.txt
 *.log
 *.logs
+.env.production
+.env.development

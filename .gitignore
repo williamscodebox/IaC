@@ -64,3 +64,5 @@ Texp.txt
 *.logs
 .env.production
 .env.development
+drizzle.config.localdb.js
+drizzle.config.js

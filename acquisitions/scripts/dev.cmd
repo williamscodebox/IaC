@@ -1,78 +1,95 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
+:: ---------------------------------------------------------
+:: Always run from project root (script is inside /scripts)
+:: ---------------------------------------------------------
+cd /d "%~dp0\.."
+
+echo.
 echo  Starting Acquisition App in Development Mode
 echo =================================================
+echo.
 
-:: Check if .env.development exists
+:: ---------------------------------------------------------
+:: Check for .env.development
+:: ---------------------------------------------------------
 if not exist .env.development (
     echo  Error: .env.development file not found!
-    echo    Please copy .env.development from the template and update with your Neon credentials.
     exit /b 1
 )
 
+:: ---------------------------------------------------------
 :: Check if Docker is running
+:: ---------------------------------------------------------
 docker info >nul 2>&1
 if errorlevel 1 (
     echo  Error: Docker is not running!
-    echo    Please start Docker Desktop and try again.
     exit /b 1
 )
 
-:: Create .neon_local directory if it doesn't exist
-if not exist .neon_local (
-    mkdir .neon_local
-)
+:: ---------------------------------------------------------
+:: Ensure .neon_local exists
+:: ---------------------------------------------------------
+if not exist .neon_local mkdir .neon_local
 
-:: Add .neon_local to .gitignore if not already present
-findstr /c:".neon_local/" .gitignore >nul 2>&1
+:: ---------------------------------------------------------
+:: Start Docker containers in background
+:: ---------------------------------------------------------
+echo  Starting Docker containers...
+docker compose -f docker-compose.dev.yml up -d --build
+
 if errorlevel 1 (
-    echo .neon_local/ >> .gitignore
-    echo  Added .neon_local/ to .gitignore
+    echo  Error: Failed to start Docker containers!
+    exit /b 1
 )
 
-echo  Building and starting development containers...
-echo    - Neon Local proxy will create an ephemeral database branch
-echo    - Application will run with hot reload enabled
+echo.
+echo  Containers started. Waiting for Neon Local to become healthy...
 echo.
 
-:: Run migrations with Drizzle
+:: ---------------------------------------------------------
+:: Wait for Neon Local health status
+:: ---------------------------------------------------------
+set MAX_RETRIES=60
+set RETRY=0
+
+:waitloop
+for /f "delims=" %%H in ('docker inspect -f "{{.State.Health.Status}}" acquisitions-neon-local 2^>nul') do (
+    set HEALTH=%%H
+)
+
+if "!HEALTH!"=="healthy" (
+    echo  ✓ Neon Local is healthy!
+    goto db_ready
+)
+
+set /a RETRY+=1
+if !RETRY! GEQ %MAX_RETRIES% (
+    echo  ❌ Timeout: Neon Local did not become healthy.
+    exit /b 1
+)
+
+echo  Waiting for Neon Local... (!RETRY!/%MAX_RETRIES!)
+timeout /t 2 >nul
+goto waitloop
+
+:db_ready
+
+echo.
 echo  Applying latest schema with Drizzle...
 call npm run db:migrate
+
 if errorlevel 1 (
     echo  Migration failed!
     exit /b 1
 )
 
-:: Wait for the database to be ready
-echo ⏳ Waiting for the database to be ready...
-:waitloop
-docker compose exec neon-local psql -U neon -d neondb -c "SELECT 1" >nul 2>&1
-if errorlevel 1 (
-    timeout /t 2 >nul
-    goto waitloop
-)
-echo  Database is ready!
-
-:: Optional: verify schema tables exist
-echo  Listing tables in neondb...
-docker compose exec neon-local psql -U neon -d neondb -c "\dt"
-
-:: Optional: check migration history
-echo  Migration history:
-docker compose exec neon-local psql -U neon -d neondb -c "SELECT * FROM _drizzle_migrations;"
-
-:: Reset log file and start development environment silently
-type nul > .neon_local\dev.log
-
-docker compose -f docker-compose.dev.yml up --build > .neon_local\dev.log 2>&1
-
-
 echo.
-echo  Development environment started!
-echo    Application: http://localhost:5173
-echo    Database: postgres://neon:npg@localhost:5432/neondb
+echo  Starting full development environment...
+echo  (Logs will stream below)
 echo.
-echo To stop the environment, press Ctrl+C and then run: stop-dev.cmd
+
+docker compose -f docker-compose.dev.yml up --build
 
 endlocal

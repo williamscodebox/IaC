@@ -66,3 +66,4 @@ Texp.txt
 .env.development
 drizzle.config.localdb.js
 drizzle.config.js
+databaseforlocal.js

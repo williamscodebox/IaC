@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import 'dotenv/config';
 
 const client = new Client({
-  host: 'localhost',
+  host: 'acquisitions-neon-local',
   port: 5432,
   user: 'neon',
   password: process.env.NEON_PASSWORD,
